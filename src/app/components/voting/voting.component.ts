@@ -74,12 +74,25 @@ import { PokerService } from '../../services/poker.service';
 
         <!-- Actions Section -->
         <div class="actions-section">
-          <button (click)="pokerService.reveal()" class="btn-primary">
+          <button 
+            (click)="pokerService.reveal()" 
+            class="btn-primary"
+            [disabled]="!pokerService.isHost()"
+            [title]="!pokerService.isHost() ? 'Apenas o Scrum Master pode revelar' : ''"
+          >
             Revelar Votos
           </button>
-          <button (click)="pokerService.reset()" class="btn-secondary">
+          <button 
+            (click)="pokerService.reset()" 
+            class="btn-secondary"
+            [disabled]="!pokerService.isHost()"
+            [title]="!pokerService.isHost() ? 'Apenas o Scrum Master pode resetar' : ''"
+          >
             Nova Rodada
           </button>
+          @if (pokerService.isHost()) {
+            <span class="host-badge">👑 Você é o Scrum Master</span>
+          }
         </div>
       </div>
     </div>
@@ -288,9 +301,14 @@ import { PokerService } from '../../services/poker.service';
       color: white;
     }
 
-    .btn-primary:hover {
+    .btn-primary:hover:not(:disabled) {
       opacity: 0.9;
       box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
     .btn-secondary {
@@ -299,8 +317,24 @@ import { PokerService } from '../../services/poker.service';
       border: 2px solid #ddd;
     }
 
-    .btn-secondary:hover {
+    .btn-secondary:hover:not(:disabled) {
       background: #e0e0e0;
+    }
+
+    .btn-secondary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: #e0e0e0;
+    }
+
+    .host-badge {
+      background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      white-space: nowrap;
     }
 
     @media (max-width: 768px) {

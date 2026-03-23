@@ -4,9 +4,11 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:host": "ng serve --host 0.0.0.0",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "mock-server": "node mock-server.js"
   },
   "private": true,
   "packageManager": "npm@11.2.0",
@@ -17,6 +19,8 @@
     "@angular/forms": "^21.2.0",
     "@angular/platform-browser": "^21.2.0",
     "@angular/router": "^21.2.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
