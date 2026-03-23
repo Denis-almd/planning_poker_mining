@@ -1,5 +1,5 @@
 // Mock Server para testar Planning Poker Frontend
-// Simula os 6 endpoints da API
+// Simula os 7 endpoints da API
 // Use: node mock-server.js
 
 const express = require('express');
@@ -11,10 +11,17 @@ app.use(cors());
 
 // Estado fake em memória
 const state = {
-  taskId: '',
+  taskId: 'KER-0001',
   revealed: false,
-  players: {},
-  host: null,  // Primeiro a entrar é o host (pode revelar/resetar)
+  players: {
+    'Denis': { voted: false, card: null },
+    'Cibele': { voted: false, card: null },
+    'João': { voted: false, card: null },
+    'Maicon': { voted: false, card: null },
+    'Osvano': { voted: false, card: null },
+    'Ian': { voted: false, card: null }
+  },
+  host: 'Denis',
   updatedAt: new Date().toISOString()
 };
 
@@ -26,6 +33,7 @@ app.get('/api/state', (req, res) => {
   const response = {
     taskId: state.taskId,
     revealed: state.revealed,
+    host: state.host,
     players: {},
     updatedAt: new Date().toISOString()
   };
@@ -117,7 +125,7 @@ app.post('/api/reveal', (req, res) => {
   if (name !== state.host) {
     console.log(`  → ❌ ${name} não é host (host é ${state.host})`);
     return res.status(403).json({ 
-      error: 'Apenas o Scrum Master pode revelar votos',
+      error: 'Apenas o Facilitador pode revelar votos',
       host: state.host 
     });
   }
@@ -143,7 +151,7 @@ app.post('/api/reset', (req, res) => {
   if (name !== state.host) {
     console.log(`  → ❌ ${name} não é host (host é ${state.host})`);
     return res.status(403).json({ 
-      error: 'Apenas o Scrum Master pode resetar a rodada',
+      error: 'Apenas o Facilitador pode resetar a rodada',
       host: state.host 
     });
   }
@@ -157,6 +165,33 @@ app.post('/api/reset', (req, res) => {
 
   console.log(`  → ✓ Rodada resetada`);
   res.json({ ok: true, message: 'Rodada resetada' });
+});
+
+// POST /api/set-host
+app.post('/api/set-host', (req, res) => {
+  const { name, newHost } = req.body;
+  console.log(`POST /api/set-host - ${name} quer transferir host para ${newHost}`);
+
+  if (!name || !newHost) {
+    return res.status(400).json({ error: 'name e newHost obrigatórios' });
+  }
+
+  if (name !== state.host) {
+    return res.status(403).json({
+      error: 'Apenas o Scrum Master atual pode transferir a facilitação',
+      host: state.host
+    });
+  }
+
+  if (!state.players[newHost]) {
+    return res.status(404).json({ error: 'Novo host precisa estar na sala' });
+  }
+
+  state.host = newHost;
+  state.updatedAt = new Date().toISOString();
+
+  console.log(`  → ✓ Novo host definido: ${state.host}`);
+  res.json({ ok: true, message: `Novo host: ${state.host}`, host: state.host });
 });
 
 // Health check
@@ -180,6 +215,7 @@ Endpoints disponíveis:
   POST /api/vote         - Registrar voto
   POST /api/reveal       - Revelar votos
   POST /api/reset        - Resetar rodada
+  POST /api/set-host     - Transferir facilitação
   GET  /health           - Health check
 
 Status incial:

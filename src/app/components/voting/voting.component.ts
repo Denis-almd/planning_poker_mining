@@ -78,7 +78,7 @@ import { PokerService } from '../../services/poker.service';
             (click)="pokerService.reveal()" 
             class="btn-primary"
             [disabled]="!pokerService.isHost()"
-            [title]="!pokerService.isHost() ? 'Apenas o Scrum Master pode revelar' : ''"
+            [title]="!pokerService.isHost() ? 'Apenas o Facilitador pode revelar' : ''"
           >
             Revelar Votos
           </button>
@@ -86,13 +86,31 @@ import { PokerService } from '../../services/poker.service';
             (click)="pokerService.reset()" 
             class="btn-secondary"
             [disabled]="!pokerService.isHost()"
-            [title]="!pokerService.isHost() ? 'Apenas o Scrum Master pode resetar' : ''"
+            [title]="!pokerService.isHost() ? 'Apenas o Facilitador pode resetar' : ''"
           >
             Nova Rodada
           </button>
-          @if (pokerService.isHost()) {
-            <span class="host-badge">👑 Você é o Scrum Master</span>
-          }
+          <div class="host-transfer" *ngIf="pokerService.isHost()">
+            <select [(ngModel)]="newHost" class="host-select">
+              <option value="">Selecione o novo facilitador</option>
+              <option
+                *ngFor="let player of getPlayersList()"
+                [value]="player.name"
+                [disabled]="player.name === pokerService.state().host"
+              >
+                {{ player.name }}
+              </option>
+            </select>
+            <button
+              (click)="onTransferHost()"
+              class="btn-secondary"
+              [disabled]="!newHost"
+            >
+              Transferir Facilitação
+            </button>
+          </div>
+          <span *ngIf="pokerService.isHost()" class="host-badge">👑 Você é o Facilitador</span>
+          <span class="host-current">Facilitador atual: {{ pokerService.state().host || 'Nenhum' }}</span>
         </div>
       </div>
     </div>
@@ -153,8 +171,10 @@ import { PokerService } from '../../services/poker.service';
     .actions-section {
       grid-column: 1 / -1;
       display: flex;
+      flex-wrap: wrap;
       gap: 1rem;
       justify-content: center;
+      align-items: center;
     }
 
     h2 {
@@ -337,6 +357,24 @@ import { PokerService } from '../../services/poker.service';
       white-space: nowrap;
     }
 
+    .host-transfer {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .host-select {
+      padding: 0.6rem;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+      min-width: 220px;
+    }
+
+    .host-current {
+      font-weight: bold;
+      color: #333;
+    }
+
     @media (max-width: 768px) {
       .main-content {
         grid-template-columns: 1fr;
@@ -366,6 +404,7 @@ import { PokerService } from '../../services/poker.service';
 export class VotingComponent {
   cards = ['0', '1', '2', '3', '5', '8', '13', '21', '?', '☕'];
   newTaskId = '';
+  newHost = '';
   selectedCard: string | null = null;
 
   constructor(public pokerService: PokerService) {}
@@ -380,6 +419,15 @@ export class VotingComponent {
       await this.pokerService.setTask(this.newTaskId);
       this.newTaskId = '';
     }
+  }
+
+  async onTransferHost() {
+    if (!this.newHost) {
+      return;
+    }
+
+    await this.pokerService.transferHost(this.newHost);
+    this.newHost = '';
   }
 
   isCardSelected(card: string): boolean {

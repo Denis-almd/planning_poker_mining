@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 export interface PokerState {
 	taskId: string;
 	revealed: boolean;
+	host: string;
 	players: { [name: string]: { voted: boolean; card?: string } };
 	updatedAt: string;
 }
@@ -19,12 +20,14 @@ interface ApiResponse {
 @Injectable({
 	providedIn: 'root'
 })
+
 export class PokerService {
 	private readonly API_URL = 'http://localhost:5000/api';
 
 	state = signal<PokerState>({
 		taskId: '',
 		revealed: false,
+		host: '',
 		players: {},
 		updatedAt: new Date().toISOString()
 	});
@@ -64,10 +67,34 @@ export class PokerService {
 			);
 
 			this.state.set(response);
+			this.isHost.set(response.host === this.currentPlayer());
 			return response;
 		} catch (error) {
 			console.error('Erro ao obter estado:', error);
 			return undefined;
+		}
+	}
+
+	async transferHost(newHost: string): Promise<void> {
+		const player = this.currentPlayer();
+
+		if (!player) {
+			return;
+		}
+
+		try {
+			await firstValueFrom(
+				this.http.post(`${this.API_URL}/set-host`, { name: player, newHost })
+			);
+
+			await this.getState();
+		} catch (error: any) {
+			if (error.status === 403) {
+				console.error('Erro: Apenas o Scrum Master atual pode transferir a facilitação');
+				alert('❌ Apenas o Scrum Master atual pode transferir a facilitação');
+			} else {
+				console.error('Erro ao transferir host:', error);
+			}
 		}
 	}
 
