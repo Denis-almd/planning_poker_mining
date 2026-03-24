@@ -83,6 +83,7 @@ export class PokerService {
         });
     }
 	}
+	
 	async getState(): Promise<PokerState | undefined> {
 		try {
 			const response = await firstValueFrom(
