@@ -22,7 +22,7 @@ interface ApiResponse {
 })
 
 export class PokerService {
-	private readonly API_URL = 'http://127.0.0.1:8000/api';
+	private readonly API_URL = 'https://denismt01.pythonanywhere.com/api';
 	private readonly PLAYER_STORAGE_KEY = 'pokerPlayerName';
 
 	state = signal<PokerState>({
