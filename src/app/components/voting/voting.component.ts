@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PokerService } from '../../services/poker.service';
@@ -15,7 +15,16 @@ export class VotingComponent {
   newHost = '';
   selectedCard: string | null = null;
 
-  constructor(public pokerService: PokerService) {}
+  constructor(public pokerService: PokerService) {
+    // Limpa o voto selecionado sempre que a rodada for resetada
+    effect(() => {
+      const state = this.pokerService.state();
+      const myName = this.pokerService.currentPlayer();
+      if (myName && state.players[myName] && !state.players[myName].voted) {
+        this.selectedCard = null;
+      }
+    });
+  }
 
   async onVote(card: string) {
     this.selectedCard = card;
