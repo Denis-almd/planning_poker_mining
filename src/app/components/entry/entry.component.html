@@ -1,0 +1,24 @@
+<div class="entry-container">
+  <div class="entry-card">
+    <h1>Planning Poker</h1>
+    <p class="subtitle">Entre com seu nome para começar</p>
+
+    <form (ngSubmit)="onEnter()">
+      <input
+        type="text"
+        [(ngModel)]="playerName"
+        name="playerName"
+        placeholder="Seu nome"
+        class="input-field"
+        (keyup.enter)="onEnter()"
+      />
+      <button
+        type="submit"
+        [disabled]="!playerName.trim()"
+        class="btn-primary"
+      >
+        Entrar
+      </button>
+    </form>
+  </div>
+</div>

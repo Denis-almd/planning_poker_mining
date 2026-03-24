@@ -1,0 +1,103 @@
+<div class="voting-container">
+  <div class="header">
+    <h1>Planning Poker</h1>
+    <div class="player-info">
+      <span class="player-name">{{ pokerService.currentPlayer() }}</span>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="task-section">
+      <div class="task-header">
+        <h2>Task</h2>
+        <div class="task-input-group">
+          <input
+            type="text"
+            [(ngModel)]="newTaskId"
+            placeholder="TASK-123 (ou deixe em branco)"
+            class="task-input"
+          />
+          <button (click)="onSetTask()" class="btn-secondary">
+            Definir Task
+          </button>
+        </div>
+      </div>
+      <div class="task-display">
+        {{ pokerService.state().taskId || 'Nenhuma task em votação' }}
+      </div>
+    </div>
+
+    <div class="players-section">
+      <h2>Participantes</h2>
+      <div class="players-grid">
+        <div
+          *ngFor="let player of getPlayersList()"
+          class="player-card"
+          [class.voted]="player.voted"
+        >
+          <div class="player-name">{{ player.name }}</div>
+          <div class="vote-status">
+            {{ player.voted ? 'VOTOU' : 'AGUARDANDO' }}
+          </div>
+          <div class="vote-card" *ngIf="pokerService.state().revealed && player.card">
+            {{ player.card }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="voting-section">
+      <h2>Seu Voto</h2>
+      <div class="cards-grid">
+        <button
+          *ngFor="let card of cards"
+          class="card"
+          (click)="onVote(card)"
+          [class.selected]="isCardSelected(card)"
+        >
+          {{ card }}
+        </button>
+      </div>
+    </div>
+
+    <div class="actions-section">
+      <button
+        (click)="pokerService.reveal()"
+        class="btn-primary"
+        [disabled]="!pokerService.isHost()"
+        [title]="!pokerService.isHost() ? 'Apenas o Facilitador pode revelar' : ''"
+      >
+        Revelar Votos
+      </button>
+      <button
+        (click)="pokerService.reset()"
+        class="btn-secondary"
+        [disabled]="!pokerService.isHost()"
+        [title]="!pokerService.isHost() ? 'Apenas o Facilitador pode resetar' : ''"
+      >
+        Nova Rodada
+      </button>
+      <div class="host-transfer" *ngIf="pokerService.isHost()">
+        <select [(ngModel)]="newHost" class="host-select">
+          <option value="">Selecione o novo facilitador</option>
+          <option
+            *ngFor="let player of getPlayersList()"
+            [value]="player.name"
+            [disabled]="player.name === pokerService.state().host"
+          >
+            {{ player.name }}
+          </option>
+        </select>
+        <button
+          (click)="onTransferHost()"
+          class="btn-secondary"
+          [disabled]="!newHost"
+        >
+          Transferir Facilitação
+        </button>
+      </div>
+      <span *ngIf="pokerService.isHost()" class="host-badge">👑 Você é o Facilitador</span>
+      <span class="host-current">Facilitador atual: {{ pokerService.state().host || 'Nenhum' }}</span>
+    </div>
+  </div>
+</div>
