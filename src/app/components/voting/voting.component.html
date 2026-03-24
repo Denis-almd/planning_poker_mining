@@ -44,7 +44,7 @@
         >
           <div class="player-name">
             {{ player.name }}
-            <span *ngIf="player.name === pokerService.state().host" class="host-label">👑 host</span>
+            <span *ngIf="player.name === pokerService.state().host" class="host-label">👑 Host</span>
           </div>
           <div class="vote-status">
             {{ player.voted ? 'VOTOU' : 'AGUARDANDO' }}
@@ -75,7 +75,7 @@
         (click)="pokerService.reveal()"
         class="btn-primary"
         [disabled]="!pokerService.isHost()"
-        [title]="!pokerService.isHost() ? 'Apenas o Facilitador pode revelar' : ''"
+        [title]="!pokerService.isHost() ? 'Apenas o Host pode revelar' : ''"
       >
         Revelar Votos
       </button>
@@ -83,13 +83,13 @@
         (click)="pokerService.reset()"
         class="btn-secondary"
         [disabled]="!pokerService.isHost()"
-        [title]="!pokerService.isHost() ? 'Apenas o Facilitador pode resetar' : ''"
+        [title]="!pokerService.isHost() ? 'Apenas o Host pode resetar' : ''"
       >
         Nova Rodada
       </button>
       <div class="host-transfer" *ngIf="pokerService.isHost()">
         <select [(ngModel)]="newHost" class="host-select">
-          <option value="">Selecione o novo facilitador</option>
+          <option value="">Selecione o novo Host</option>
           <option
             *ngFor="let player of getPlayersList()"
             [value]="player.name"
@@ -103,10 +103,10 @@
           class="btn-secondary"
           [disabled]="!newHost"
         >
-          Transferir Facilitação
+          Transferir Host
         </button>
       </div>
-      <span *ngIf="pokerService.isHost()" class="host-badge">👑 Você é o Facilitador</span>
+      <span *ngIf="pokerService.isHost()" class="host-badge">👑 Você é o Host</span>
     </div>
   </div>
 </div>
