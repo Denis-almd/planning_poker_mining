@@ -7,13 +7,7 @@ import { PokerService } from './services/poker.service';
 @Component({
   selector: 'app-root',
   imports: [CommonModule, EntryComponent, VotingComponent],
-  template: `
-    @if (pokerService.currentPlayer() === null) {
-      <app-entry></app-entry>
-    } @else {
-      <app-voting></app-voting>
-    }
-  `,
+  templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class App {
