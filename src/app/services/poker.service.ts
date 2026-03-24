@@ -22,7 +22,7 @@ interface ApiResponse {
 })
 
 export class PokerService {
-	private readonly API_URL = 'http://localhost:5000/api';
+	private readonly API_URL = 'http://127.0.0.1:8000/api';
 
 	state = signal<PokerState>({
 		taskId: '',
@@ -60,6 +60,29 @@ export class PokerService {
 		}
 	}
 
+	async leaveGame(): Promise<void> {
+    const player = this.currentPlayer();
+    if (!player) return;
+
+    try {
+        await firstValueFrom(
+            this.http.post(`${this.API_URL}/leave`, { name: player })
+        );
+    } catch (error) {
+        console.error('Erro ao sair da sala:', error);
+    } finally {
+        this.stopPolling();
+        this.currentPlayer.set(null);
+        this.isHost.set(false);
+        this.state.set({
+            taskId: '',
+            revealed: false,
+            host: '',
+            players: {},
+            updatedAt: new Date().toISOString()
+        });
+    }
+	}
 	async getState(): Promise<PokerState | undefined> {
 		try {
 			const response = await firstValueFrom(
