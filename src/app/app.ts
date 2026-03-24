@@ -12,6 +12,8 @@ import { PokerService } from './services/poker.service';
 })
 export class App {
   constructor(public pokerService: PokerService) {
+    void this.pokerService.initFromStorage();
+
     effect(() => {
       if (this.pokerService.currentPlayer() === null) {
         this.pokerService.stopPolling();

@@ -23,6 +23,7 @@ interface ApiResponse {
 
 export class PokerService {
 	private readonly API_URL = 'http://127.0.0.1:8000/api';
+	private readonly PLAYER_STORAGE_KEY = 'pokerPlayerName';
 
 	state = signal<PokerState>({
 		taskId: '',
@@ -38,52 +39,99 @@ export class PokerService {
 
 	constructor(private http: HttpClient) {}
 
+	async initFromStorage(): Promise<void> {
+		const savedPlayer = this.getSavedPlayerName();
+		if (!savedPlayer) {
+			return;
+		}
+
+		await this.setPlayer(savedPlayer);
+	}
+
+	getSavedPlayerName(): string {
+		try {
+			return localStorage.getItem(this.PLAYER_STORAGE_KEY) ?? '';
+		} catch {
+			return '';
+		}
+	}
+
+	private savePlayerName(name: string): void {
+		try {
+			localStorage.setItem(this.PLAYER_STORAGE_KEY, name);
+		} catch {
+			// Ignora erro de storage para nao bloquear a experiencia.
+		}
+	}
+
+	private clearSavedPlayerName(): void {
+		try {
+			localStorage.removeItem(this.PLAYER_STORAGE_KEY);
+		} catch {
+			// Ignora erro de storage para nao bloquear a experiencia.
+		}
+	}
+
 	async setPlayer(name: string) {
-		this.currentPlayer.set(name);
-		await this.joinGame(name);
+		const normalizedName = name.trim();
+		if (!normalizedName) {
+			return;
+		}
+
+		this.currentPlayer.set(normalizedName);
+		const hasJoined = await this.joinGame(normalizedName);
+		if (!hasJoined) {
+			this.currentPlayer.set(null);
+			this.isHost.set(false);
+			this.clearSavedPlayerName();
+			return;
+		}
+
+		this.savePlayerName(normalizedName);
 		this.startPolling();
 	}
 
-	private async joinGame(name: string): Promise<void> {
+	private async joinGame(name: string): Promise<boolean> {
 		try {
 			const response = await firstValueFrom(
 				this.http.post<ApiResponse>(`${this.API_URL}/join`, { name })
 			);
 
-			if (response.isHost) {
-				this.isHost.set(true);
-			}
-
-			return;
+			this.isHost.set(!!response.isHost);
+			return true;
 		} catch (error) {
 			console.error('Erro ao entrar na sala:', error);
+			return false;
 		}
 	}
 
 	async leaveGame(): Promise<void> {
-    const player = this.currentPlayer();
-    if (!player) return;
+		const player = this.currentPlayer();
+		if (!player) {
+			return;
+		}
 
-    try {
-        await firstValueFrom(
-            this.http.post(`${this.API_URL}/leave`, { name: player })
-        );
-    } catch (error) {
-        console.error('Erro ao sair da sala:', error);
-    } finally {
-        this.stopPolling();
-        this.currentPlayer.set(null);
-        this.isHost.set(false);
-        this.state.set({
-            taskId: '',
-            revealed: false,
-            host: '',
-            players: {},
-            updatedAt: new Date().toISOString()
-        });
-    }
+		try {
+			await firstValueFrom(
+				this.http.post(`${this.API_URL}/leave`, { name: player })
+			);
+		} catch (error) {
+			console.error('Erro ao sair da sala:', error);
+		} finally {
+			this.stopPolling();
+			this.currentPlayer.set(null);
+			this.isHost.set(false);
+			this.clearSavedPlayerName();
+			this.state.set({
+				taskId: '',
+				revealed: false,
+				host: '',
+				players: {},
+				updatedAt: new Date().toISOString()
+			});
+		}
 	}
-	
+
 	async getState(): Promise<PokerState | undefined> {
 		try {
 			const response = await firstValueFrom(
@@ -199,6 +247,7 @@ export class PokerService {
 	}
 
 	startPolling(): void {
+		this.stopPolling();
 		this.getState();
 		this.pollInterval = setInterval(() => {
 			this.getState();
@@ -208,6 +257,7 @@ export class PokerService {
 	stopPolling(): void {
 		if (this.pollInterval) {
 			clearInterval(this.pollInterval);
+			this.pollInterval = null;
 		}
 	}
 }
