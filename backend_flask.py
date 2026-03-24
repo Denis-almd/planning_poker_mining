@@ -1,37 +1,61 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from os import getenv
 import logging
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# CORS Configuration - Allow all origins for development
-CORS(app)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "http://localhost:4200",
+            "https://denis-almd.github.io"
+        ],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 SESSION_DURATION = timedelta(hours=int(getenv("SESSION_DURATION_HOURS", 1)))
 
-def now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+
+def get_app_timezone():
+    tz_key = getenv("APP_TIMEZONE", "America/Sao_Paulo")
+    try:
+        return ZoneInfo(tz_key)
+    except ZoneInfoNotFoundError:
+        logger.warning(
+            "Timezone '%s' nao encontrada. Usando fallback UTC-03:00. "
+            "Instale o pacote 'tzdata' para suportar timezones IANA no Windows.",
+            tz_key,
+        )
+        return timezone(timedelta(hours=-3))
+
+
+APP_TIMEZONE = get_app_timezone()
+
+def now_local() -> datetime:
+    return datetime.now(APP_TIMEZONE)
 
 state = {
     "taskId": "",
     "revealed": False,
     "host": "",
     "players": {},
-    "updatedAt": now_utc().isoformat(),
+    "updatedAt": now_local().isoformat(),
     "sessionStartedAt": None,
     "sessionExpiresAt": None,
 }
 
 
 def touch():
-    state["updatedAt"] = now_utc().isoformat()
+    state["updatedAt"] = now_local().isoformat()
 
 def full_reset():
     state["taskId"] = ""
@@ -48,7 +72,7 @@ def ensure_active_session():
     if not expires_at:
         return
 
-    if now_utc() >= datetime.fromisoformat(expires_at):
+    if now_local() >= datetime.fromisoformat(expires_at):
         full_reset()
 
 
@@ -67,7 +91,7 @@ def start_session_if_needed(first_player_name: str):
     if state["sessionStartedAt"] is not None:
         return
 
-    started_at = now_utc()
+    started_at = now_local()
     expires_at = started_at + SESSION_DURATION
 
     state["sessionStartedAt"] = started_at.isoformat()
@@ -77,35 +101,30 @@ def start_session_if_needed(first_player_name: str):
 
 
 def validate_name(name: str) -> tuple[bool, str]:
-    """Valida nome do jogador"""
     name = name.strip() if isinstance(name, str) else ""
-    
+
     if not name:
         return False, "Nome nao pode estar vazio"
     if len(name) < 1 or len(name) > 50:
         return False, "Nome deve ter entre 1 e 50 caracteres"
-    
-    # Permite letras, números, espaços e alguns caracteres especiais
+
     allowed_chars = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_àáâãäèéêëìíîïòóôõöùúûüç')
     if not all(c in allowed_chars for c in name):
         return False, "Nome contém caracteres inválidos"
-    
+
     return True, name
 
 
 def ensure_player_in_room(player_name: str) -> tuple[bool, str, int]:
-    """Verifica se jogador está na sala ativa"""
     error = ensure_room_is_active()
     if error:
         return False, error["error"], error["status"]
-    
+
     if player_name not in state["players"]:
         return False, "Jogador nao esta na sala. Entre novamente.", 404
-    
+
     return True, "", 200
 
-
-# ============ ENDPOINTS ============
 
 @app.route('/api/state', methods=['GET'])
 def get_state():
@@ -134,14 +153,13 @@ def get_state():
 def join():
     data = request.get_json()
     name = data.get('name', '') if data else ''
-    
-    # Validar nome
+
     is_valid, validated_name = validate_name(name)
     if not is_valid:
         return jsonify({"error": validated_name}), 400
-    
+
     name = validated_name
-    
+
     ensure_active_session()
     logger.info(f"Player joining: {name}")
 
@@ -156,7 +174,6 @@ def join():
             "card": None,
         }
 
-    # Se por algum motivo a sala existe sem host, corrige aqui.
     if not state["host"]:
         state["host"] = name
 
@@ -175,10 +192,10 @@ def join():
 def set_task():
     data = request.get_json()
     task_id = data.get('taskId', '') if data else ''
-    
+
     if not task_id or len(task_id) > 200:
         return jsonify({"error": "TaskId inválido"}), 400
-    
+
     error = ensure_room_is_active()
     if error:
         return jsonify({"error": error["error"]}), error["status"]
@@ -204,10 +221,10 @@ def vote():
     data = request.get_json()
     name = data.get('name', '') if data else ''
     card = data.get('card', '') if data else ''
-    
+
     is_valid, validated_name = validate_name(name)
     name = validated_name if is_valid else ''
-    
+
     success, error_msg, status_code = ensure_player_in_room(name)
     if not success:
         return jsonify({"error": error_msg}), status_code
@@ -230,10 +247,10 @@ def vote():
 def reveal():
     data = request.get_json()
     name = data.get('name', '') if data else ''
-    
+
     is_valid, validated_name = validate_name(name)
     name = validated_name if is_valid else ''
-    
+
     success, error_msg, status_code = ensure_player_in_room(name)
     if not success:
         return jsonify({"error": error_msg}), status_code
@@ -258,10 +275,10 @@ def reveal():
 def reset():
     data = request.get_json()
     name = data.get('name', '') if data else ''
-    
+
     is_valid, validated_name = validate_name(name)
     name = validated_name if is_valid else ''
-    
+
     success, error_msg, status_code = ensure_player_in_room(name)
     if not success:
         return jsonify({"error": error_msg}), status_code
@@ -290,10 +307,10 @@ def set_host():
     data = request.get_json()
     name = data.get('name', '') if data else ''
     new_host = data.get('newHost', '') if data else ''
-    
+
     is_valid, validated_name = validate_name(name)
     name = validated_name if is_valid else ''
-    
+
     success, error_msg, status_code = ensure_player_in_room(name)
     if not success:
         return jsonify({"error": error_msg}), status_code
@@ -318,34 +335,30 @@ def set_host():
 
 @app.route('/api/leave', methods=['POST'])
 def leave():
-    """Remove jogador da sala. Se era host, transfere para outro ou reseta tudo."""
     data = request.get_json()
     name = data.get('name', '') if data else ''
-    
+
     is_valid, validated_name = validate_name(name)
     name = validated_name if is_valid else ''
-    
+
     ensure_active_session()
-    
+
     if name not in state["players"]:
         return jsonify({"error": "Jogador nao encontrado na sala"}), 404
-    
+
     del state["players"][name]
     logger.info(f"Player left: {name}")
-    
-    # Se era o host, transferir para outro ou resetar
+
     if state["host"] == name:
         if state["players"]:
-            # Transfere para o primeiro jogador disponível
             state["host"] = next(iter(state["players"].keys()))
             logger.info(f"Host transferido para {state['host']} (substituindo {name})")
         else:
-            # Última pessoa saiu
             full_reset()
             logger.info("Sala vazia. Sessão resetada.")
-    
+
     touch()
-    
+
     return jsonify({
         "ok": True,
         "message": "Saiu da sala",
@@ -356,7 +369,6 @@ def leave():
 
 @app.route('/api/admin/reset-all', methods=['POST'])
 def reset_all():
-    """⚠️ ADMIN: Resetar estado global"""
     logger.warning("Estado global resetado via /api/admin/reset-all")
     full_reset()
     return jsonify({
@@ -377,4 +389,4 @@ def server_error(error):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=False)
+    app.run(host='0.0.0.0', port=8001, debug=False)
