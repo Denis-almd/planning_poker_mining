@@ -8,7 +8,7 @@
         (click)="onLogout()"
         title="Sair da sala"
       >
-        🚪 Sair
+        Sair
       </button>
     </div>
   </div>
@@ -42,7 +42,10 @@
           class="player-card"
           [class.voted]="player.voted"
         >
-          <div class="player-name">{{ player.name }}</div>
+          <div class="player-name">
+            {{ player.name }}
+            <span *ngIf="player.name === pokerService.state().host" class="host-label">👑 host</span>
+          </div>
           <div class="vote-status">
             {{ player.voted ? 'VOTOU' : 'AGUARDANDO' }}
           </div>
