@@ -38,6 +38,12 @@ export class VotingComponent {
     this.newHost = '';
   }
 
+  async onLogout() {
+    if (confirm('Tem certeza que deseja sair da sala?')) {
+      await this.pokerService.leaveGame();
+    }
+  }
+
   isCardSelected(card: string): boolean {
     return this.selectedCard === card;
   }

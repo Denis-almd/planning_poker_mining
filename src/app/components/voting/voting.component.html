@@ -3,6 +3,13 @@
     <h1>Planning Poker</h1>
     <div class="player-info">
       <span class="player-name">{{ pokerService.currentPlayer() }}</span>
+      <button
+        class="btn-logout"
+        (click)="onLogout()"
+        title="Sair da sala"
+      >
+        🚪 Sair
+      </button>
     </div>
   </div>
 
